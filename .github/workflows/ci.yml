@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ["20", "22", "24"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+
+      - name: Unit tests
+        run: npm test
+
+      # The two entry points are what OpenCode loads; a change that breaks either export
+      # would only show up as "the plugin silently does nothing" on a phone.
+      - name: Both entry points import and expose setup()
+        run: |
+          node --input-type=module -e "
+          const [server, tui] = await Promise.all([
+            import('./src/server.js'),
+            import('./src/tui.js'),
+          ]);
+          for (const [name, mod] of [['server', server], ['tui', tui]]) {
+            if (typeof mod.default?.setup !== 'function') {
+              throw new Error(name + ' part has no setup()');
+            }
+            if (typeof mod.default?.id !== 'string' || !mod.default.id) {
+              throw new Error(name + ' part has no id');
+            }
+          }
+          console.log('entry points OK');
+          "
+
+      # package.json exports must resolve, or `plugins: [\"opencode-fterm-notify\"]` loads
+      # nothing and there is no error to read on the device.
+      - name: package.json exports resolve
+        run: |
+          node -e "
+          const pkg = require('./package.json');
+          const assert = require('node:assert');
+          assert.equal(pkg.exports['.'], './src/server.js');
+          assert.equal(pkg.exports['./tui'], './src/tui.js');
+          for (const file of Object.values(pkg.exports)) {
+            assert.ok(require('node:fs').existsSync(file), file + ' is missing');
+          }
+          console.log('exports OK');
+          "
