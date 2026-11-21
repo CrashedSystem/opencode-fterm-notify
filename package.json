@@ -1,0 +1,30 @@
+{
+  "name": "opencode-fterm-notify",
+  "version": "0.1.0",
+  "description": "Android notifications from OpenCode, through the fterm terminal's OSC 9 channel",
+  "type": "module",
+  "license": "MIT",
+  "exports": {
+    ".": "./src/server.js",
+    "./tui": "./src/tui.js"
+  },
+  "files": [
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "opencode",
+    "opencode-plugin",
+    "android",
+    "termux",
+    "fterm",
+    "notification"
+  ],
+  "scripts": {
+    "test": "node --test test/"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
